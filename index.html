@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Racer – Road Safety Racing Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui-layer">
+            <div>Score: <span id="score">0</span></div>
+            <div>Mistakes: <span id="mistakes">0</span>/3</div>
+            <div>Speed: <span id="speed-display">0</span> km/h</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="start-screen" class="overlay">
+            <h1>Safe Racer</h1>
+            <p>Follow the rules. Reach the finish line.</p>
+            <button onclick="startGame()">Start Racing</button>
+        </div>
+
+        <div id="question-modal" class="overlay hidden">
+            <div class="modal-content">
+                <h2 id="question-text">Road Safety Quiz</h2>
+                <div id="options-container"></div>
+            </div>
+        </div>
+
+        <div id="game-over" class="overlay hidden">
+            <h1 id="result-title">Game Over!</h1>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button onclick="location.reload()">Try Again</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
