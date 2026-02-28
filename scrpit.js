@@ -1,92 +1,88 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
 canvas.width = 400;
 canvas.height = 600;
 
-// Game State
+// --- ASSET LOADING ---
+const assets = {
+    car: new Image(),
+    road: new Image(),
+    signal: new Image()
+};
+
+assets.car.src = 'assets/car.png';
+assets.road.src = 'assets/road.png';
+assets.signal.src = 'assets/signals.png';
+
+// --- GAME STATE ---
 let score = 0;
 let mistakes = 0;
 let gameActive = false;
-let speed = 5;
 let roadOffset = 0;
-let distanceToFinish = 5000; // Total distance to destination
+let speed = 5;
+let frameCount = 0;
+let events = [];
 
-// Player Car
-const player = {
-    x: 175,
-    y: 500,
-    w: 50,
-    h: 80,
-    speed: 5
-};
-
-// Controls
+const player = { x: 175, y: 480, w: 50, h: 90 };
 let keys = {};
+
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-// Hazards & Rules
-let events = [];
-const eventTypes = ['SIGNAL', 'SPEED_LIMIT', 'PEDESTRIAN'];
-
 const questions = [
-    { q: "What should you do at a yellow light?", a: ["Speed up", "Slow down & stop", "Honk"], correct: 1 },
-    { q: "Who has the right of way at a crossing?", a: ["Cars", "Buses", "Pedestrians"], correct: 2 },
-    { q: "What is the primary cause of road accidents?", a: ["Speeding", "Safe driving", "New tires"], correct: 0 }
+    { q: "What does a flashing yellow light mean?", a: ["Stop immediately", "Proceed with caution", "Speed up"], correct: 1 },
+    { q: "Solid white lines on the road mean...", a: ["No lane changing", "Free parking", "Overtake now"], correct: 0 },
+    { q: "When should you use your high beams?", a: ["In heavy traffic", "On dark, open roads", "To annoy others"], correct: 1 }
 ];
 
+// --- CORE FUNCTIONS ---
 function startGame() {
     document.getElementById('start-screen').classList.add('hidden');
     gameActive = true;
-    requestAnimationFrame(gameLoop);
-    spawnEvent();
+    score = 0;
+    mistakes = 0;
+    events = [];
+    updateUI();
+    gameLoop();
 }
 
 function spawnEvent() {
-    if (!gameActive) return;
-    const type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+    const types = ['SIGNAL', 'SPEED_LIMIT', 'PEDESTRIAN'];
+    const type = types[Math.floor(Math.random() * types.length)];
     events.push({
         type: type,
-        y: -100,
-        x: 0,
-        w: 400,
-        h: 100,
-        active: true,
+        y: -150,
+        h: 60,
         passed: false,
-        color: type === 'SIGNAL' ? 'red' : (type === 'SPEED_LIMIT' ? 'blue' : 'white')
+        active: true
     });
-    setTimeout(spawnEvent, 3000 + Math.random() * 2000);
 }
 
 function update() {
     if (!gameActive) return;
 
-    // Movement
-    if (keys['ArrowLeft'] && player.x > 10) player.x -= 5;
-    if (keys['ArrowRight'] && player.x < canvas.width - player.w - 10) player.x += 5;
-    
-    // Road movement
-    roadOffset += speed;
-    distanceToFinish -= speed;
+    // Movement logic
+    if (keys['ArrowLeft'] && player.x > 20) player.x -= 5;
+    if (keys['ArrowRight'] && player.x < canvas.width - player.w - 20) player.x += 5;
 
-    // Logic for events
-    events.forEach(ev => {
+    roadOffset += speed;
+    frameCount++;
+
+    // Spawn hazards every 150 frames
+    if (frameCount % 150 === 0) spawnEvent();
+
+    events.forEach((ev, index) => {
         ev.y += speed;
 
-        // Check Rule Compliance
-        if (ev.active && ev.y > player.y - 50 && ev.y < player.y + 50) {
-            if (ev.type === 'SIGNAL' && speed > 0) {
-                triggerMistake("Ran a Red Light!");
-                ev.active = false;
-            }
-            if (ev.type === 'SPEED_LIMIT' && speed > 5) { // Simplified limit check
-                triggerMistake("Exceeded Speed Limit!");
+        // Collision/Rule Detection
+        if (ev.active && ev.y > player.y - 30 && ev.y < player.y + 30) {
+            if (ev.type === 'SIGNAL' && speed > 2) { // Logic: Player didn't slow down
+                handleMistake("Failed to stop at Red Light!");
                 ev.active = false;
             }
         }
 
-        // Successfully passed
+        // Scoring for passing successfully
         if (!ev.passed && ev.y > canvas.height) {
             score += 10;
             ev.passed = true;
@@ -94,17 +90,70 @@ function update() {
         }
     });
 
-    if (distanceToFinish <= 0) endGame(true);
+    // Clean up old events
+    events = events.filter(ev => ev.y < canvas.height + 100);
 }
 
-function triggerMistake(reason) {
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Draw Scrolling Road
+    ctx.drawImage(assets.road, 0, (roadOffset % canvas.height) - canvas.height, canvas.width, canvas.height);
+    ctx.drawImage(assets.road, 0, (roadOffset % canvas.height), canvas.width, canvas.height);
+
+    // 2. Draw Events
+    events.forEach(ev => {
+        if (ev.type === 'SIGNAL') {
+            ctx.drawImage(assets.signal, 50, ev.y, 300, 80);
+        } else {
+            // Placeholder for other assets
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.fillRect(0, ev.y, canvas.width, 20);
+            ctx.fillStyle = "white";
+            ctx.fillText(ev.type, 20, ev.y + 15);
+        }
+    });
+
+    // 3. Draw Player Car
+    ctx.drawImage(assets.car, player.x, player.y, player.w, player.h);
+}
+
+function handleMistake(reason) {
     mistakes++;
-    score -= 10;
+    score = Math.max(0, score - 10);
     updateUI();
     if (mistakes >= 3) {
         gameActive = false;
-        showQuestion();
+        showQuiz();
     }
+}
+
+function showQuiz() {
+    const modal = document.getElementById('question-modal');
+    const q = questions[Math.floor(Math.random() * questions.length)];
+    document.getElementById('question-text').innerText = q.q;
+    
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    
+    q.a.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.innerText = opt;
+        btn.className = 'option-btn';
+        btn.onclick = () => {
+            if (i === q.correct) {
+                mistakes = 0;
+                gameActive = true;
+                modal.classList.add('hidden');
+                updateUI();
+                gameLoop();
+            } else {
+                endGame();
+            }
+        };
+        container.appendChild(btn);
+    });
+    modal.classList.remove('hidden');
 }
 
 function updateUI() {
@@ -113,60 +162,11 @@ function updateUI() {
     document.getElementById('speed-display').innerText = Math.floor(speed * 10);
 }
 
-function showQuestion() {
-    const qModal = document.getElementById('question-modal');
-    const qObj = questions[Math.floor(Math.random() * questions.length)];
-    
-    document.getElementById('question-text').innerText = qObj.q;
-    const optionsDiv = document.getElementById('options-container');
-    optionsDiv.innerHTML = '';
-    
-    qObj.a.forEach((opt, index) => {
-        const btn = document.createElement('button');
-        btn.innerText = opt;
-        btn.className = 'option-btn';
-        btn.onclick = () => {
-            if (index === qObj.correct) {
-                mistakes = 0;
-                gameActive = true;
-                qModal.classList.add('hidden');
-                updateUI();
-                requestAnimationFrame(gameLoop);
-            } else {
-                endGame(false);
-            }
-        };
-        optionsDiv.appendChild(btn);
-    });
-    qModal.classList.remove('hidden');
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw Road
-    ctx.fillStyle = "#444";
-    ctx.fillRect(0,0, canvas.width, canvas.height);
-    ctx.setLineDash([20, 20]);
-    ctx.strokeStyle = "white";
-    ctx.beginPath();
-    ctx.moveTo(canvas.width/2, 0);
-    ctx.lineTo(canvas.width/2, canvas.height);
-    ctx.stroke();
-
-    // Draw Events
-    events.forEach(ev => {
-        ctx.fillStyle = ev.color;
-        ctx.globalAlpha = 0.5;
-        ctx.fillRect(0, ev.y, canvas.width, 20);
-        ctx.globalAlpha = 1.0;
-        ctx.fillStyle = "white";
-        ctx.fillText(ev.type, 10, ev.y + 15);
-    });
-
-    // Draw Player (Placeholder for car.png)
-    ctx.fillStyle = "red";
-    ctx.fillRect(player.x, player.y, player.w, player.h);
+function endGame() {
+    gameActive = false;
+    document.getElementById('question-modal').classList.add('hidden');
+    document.getElementById('game-over').classList.remove('hidden');
+    document.getElementById('final-score').innerText = score;
 }
 
 function gameLoop() {
@@ -174,11 +174,4 @@ function gameLoop() {
     update();
     draw();
     requestAnimationFrame(gameLoop);
-}
-
-function endGame(win) {
-    gameActive = false;
-    document.getElementById('game-over').classList.remove('hidden');
-    document.getElementById('result-title').innerText = win ? "Destination Reached!" : "Game Over!";
-    document.getElementById('final-score').innerText = score;
 }
