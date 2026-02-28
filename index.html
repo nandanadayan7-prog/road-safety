@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Safe Racer – Road Safety Racing Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,14 +12,26 @@
         <div id="ui-layer">
             <div>Score: <span id="score">0</span></div>
             <div>Mistakes: <span id="mistakes">0</span>/3</div>
-            <div>Speed: <span id="speed-display">0</span> km/h</div>
+            <div><span id="speed-display">0</span> km/h</div>
         </div>
 
         <canvas id="gameCanvas"></canvas>
 
         <div id="start-screen" class="overlay">
             <h1 class="game-title">SAFE RACER</h1>
-            <p id="countdown-text">Starting in 3...</p>
+            <p id="countdown-text">Get Ready...</p>
+            <p style="font-size: 0.8rem;">Use Arrows or On-Screen Buttons</p>
+        </div>
+
+        <div id="touch-controls">
+            <div class="control-group">
+                <button id="btn-left" class="t-btn">◀</button>
+                <button id="btn-right" class="t-btn">▶</button>
+            </div>
+            <div class="control-group">
+                <button id="btn-brake" class="t-btn brake">STOP</button>
+                <button id="btn-gas" class="t-btn gas">GO</button>
+            </div>
         </div>
 
         <div id="question-modal" class="overlay hidden">
@@ -30,11 +43,10 @@
 
         <div id="game-over" class="overlay hidden">
             <h1 id="result-title">Game Over!</h1>
-            <p>Final Score: <span id="final-score">0</span></p>
+            <p>Score: <span id="final-score">0</span></p>
             <button onclick="location.reload()">Restart Game</button>
         </div>
     </div>
     <script src="script.js"></script>
 </body>
 </html>
-        
